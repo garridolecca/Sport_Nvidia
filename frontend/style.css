@@ -1,0 +1,234 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  overflow: hidden;
+}
+
+/* ---- Layout ---- */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #16213e;
+  border-bottom: 2px solid #0f3460;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+#header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #e94560;
+  letter-spacing: 0.5px;
+}
+
+#header .info {
+  font-size: 12px;
+  color: #8899aa;
+}
+
+#map-container {
+  flex: 1;
+  position: relative;
+}
+
+#viewDiv {
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- Controls Panel ---- */
+#controls {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(22, 33, 62, 0.95);
+  border: 1px solid #0f3460;
+  border-radius: 8px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 10;
+  backdrop-filter: blur(10px);
+  min-width: 500px;
+}
+
+#controls button {
+  background: #0f3460;
+  color: #e0e0e0;
+  border: 1px solid #e94560;
+  border-radius: 4px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+#controls button:hover {
+  background: #e94560;
+  color: #fff;
+}
+
+#controls button.active {
+  background: #e94560;
+  color: #fff;
+}
+
+#timeline {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: #0f3460;
+  outline: none;
+}
+
+#timeline::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #e94560;
+  cursor: pointer;
+}
+
+#time-display {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  min-width: 60px;
+  text-align: center;
+}
+
+#speed-display {
+  font-size: 11px;
+  color: #8899aa;
+  min-width: 30px;
+  text-align: center;
+}
+
+/* ---- Side Panel ---- */
+#side-panel {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 220px;
+  background: rgba(22, 33, 62, 0.95);
+  border: 1px solid #0f3460;
+  border-radius: 8px;
+  padding: 12px;
+  z-index: 10;
+  max-height: calc(100% - 100px);
+  overflow-y: auto;
+  backdrop-filter: blur(10px);
+}
+
+#side-panel h3 {
+  font-size: 13px;
+  color: #e94560;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #0f3460;
+  padding-bottom: 4px;
+}
+
+.player-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.player-item:hover {
+  background: rgba(233, 69, 96, 0.15);
+}
+
+.player-item .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.player-item.selected {
+  background: rgba(233, 69, 96, 0.25);
+}
+
+#stats {
+  margin-top: 12px;
+  font-size: 11px;
+  color: #8899aa;
+}
+
+#stats div {
+  margin-bottom: 3px;
+}
+
+/* ---- Toggle buttons ---- */
+.toggle-group {
+  display: flex;
+  gap: 4px;
+}
+
+.toggle-group button {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+/* ---- Loading overlay ---- */
+#loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26, 26, 46, 0.9);
+  z-index: 100;
+}
+
+#loading .spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #0f3460;
+  border-top-color: #e94560;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+#loading p {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #8899aa;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Esri widget overrides ---- */
+.esri-ui .esri-widget {
+  background: rgba(22, 33, 62, 0.9) !important;
+  color: #e0e0e0 !important;
+}

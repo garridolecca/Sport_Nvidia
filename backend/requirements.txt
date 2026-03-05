@@ -1,0 +1,23 @@
+# NVIDIA GPU-accelerated inference
+onnxruntime-gpu>=1.17.0
+tensorrt>=8.6
+
+# Video processing & computer vision
+opencv-python>=4.9.0
+numpy>=1.24.0
+
+# Object detection (NVIDIA TensorRT-accelerated)
+ultralytics>=8.1.0
+
+# Multi-object tracking
+lap>=0.4.0
+scipy>=1.11.0
+
+# API server
+fastapi>=0.109.0
+uvicorn>=0.27.0
+
+# Data handling
+pandas>=2.1.0
+requests>=2.31.0
+tqdm>=4.66.0

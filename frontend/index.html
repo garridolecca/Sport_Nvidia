@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Soccer Player Tracker — ArcGIS</title>
+
+  <!-- ArcGIS JS API 4.x -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/dark/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="header">
+      <h1>Soccer Player Tracker</h1>
+      <div class="info">
+        <span id="frame-info">Loading...</span>
+      </div>
+    </div>
+
+    <div id="map-container">
+      <div id="viewDiv"></div>
+
+      <!-- Loading overlay -->
+      <div id="loading">
+        <div class="spinner"></div>
+        <p>Loading tracking data...</p>
+      </div>
+
+      <!-- Player list -->
+      <div id="side-panel">
+        <h3>Players</h3>
+        <div id="player-list"></div>
+        <div id="stats">
+          <div>Frame: <span id="stat-frame">-</span></div>
+          <div>Time: <span id="stat-time">-</span></div>
+          <div>Players visible: <span id="stat-count">-</span></div>
+        </div>
+      </div>
+
+      <!-- Playback controls -->
+      <div id="controls">
+        <button id="btn-prev" title="Previous frame">&#9664;&#9664;</button>
+        <button id="btn-play" title="Play / Pause">&#9654;</button>
+        <button id="btn-next" title="Next frame">&#9654;&#9654;</button>
+        <input type="range" id="timeline" min="0" max="100" value="0" />
+        <span id="time-display">0:00</span>
+        <div class="toggle-group">
+          <button id="btn-speed-down" title="Slower">-</button>
+          <span id="speed-display">1x</span>
+          <button id="btn-speed-up" title="Faster">+</button>
+        </div>
+        <div class="toggle-group">
+          <button id="btn-trails" title="Toggle trails">Trails</button>
+          <button id="btn-heatmap" title="Toggle heatmap">Heat</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
