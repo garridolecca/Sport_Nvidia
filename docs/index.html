@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sport Nvidia — Soccer Player Tracker</title>
+
+  <!-- ArcGIS JS API 4.29 -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/dark/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; font-family: "Segoe UI", system-ui, sans-serif; background: #1a1a2e; color: #e0e0e0; overflow: hidden; }
+
+    #app { display: flex; flex-direction: column; height: 100vh; }
+
+    #header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: #16213e; border-bottom: 2px solid #0f3460;
+      flex-shrink: 0; z-index: 10;
+    }
+    #header h1 { font-size: 18px; font-weight: 600; color: #e94560; letter-spacing: 0.5px; }
+    #header .subtitle { font-size: 12px; color: #8899aa; }
+    #header .info { font-size: 12px; color: #8899aa; }
+    #header a { color: #50e3c2; text-decoration: none; font-size: 12px; }
+    #header a:hover { text-decoration: underline; }
+
+    #map-container { flex: 1; position: relative; }
+    #viewDiv { width: 100%; height: 100%; }
+
+    /* Controls */
+    #controls {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: rgba(22, 33, 62, 0.95); border: 1px solid #0f3460; border-radius: 8px;
+      padding: 12px 20px; display: flex; align-items: center; gap: 16px;
+      z-index: 10; backdrop-filter: blur(10px); min-width: 520px;
+    }
+    #controls button {
+      background: #0f3460; color: #e0e0e0; border: 1px solid #e94560;
+      border-radius: 4px; padding: 6px 14px; cursor: pointer; font-size: 13px; transition: background 0.2s;
+    }
+    #controls button:hover { background: #e94560; color: #fff; }
+    #controls button.active { background: #e94560; color: #fff; }
+    #timeline {
+      flex: 1; -webkit-appearance: none; appearance: none; height: 6px;
+      border-radius: 3px; background: #0f3460; outline: none;
+    }
+    #timeline::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #e94560; cursor: pointer; }
+    #time-display { font-size: 13px; font-variant-numeric: tabular-nums; min-width: 60px; text-align: center; }
+    #speed-display { font-size: 11px; color: #8899aa; min-width: 30px; text-align: center; }
+    .toggle-group { display: flex; gap: 4px; }
+    .toggle-group button { padding: 4px 8px; font-size: 11px; }
+
+    /* Side panel */
+    #side-panel {
+      position: absolute; top: 10px; right: 10px; width: 220px;
+      background: rgba(22, 33, 62, 0.95); border: 1px solid #0f3460; border-radius: 8px;
+      padding: 12px; z-index: 10; max-height: calc(100% - 100px); overflow-y: auto;
+      backdrop-filter: blur(10px);
+    }
+    #side-panel h3 { font-size: 13px; color: #e94560; margin-bottom: 8px; border-bottom: 1px solid #0f3460; padding-bottom: 4px; }
+    .player-item {
+      display: flex; align-items: center; gap: 8px; padding: 4px 6px;
+      border-radius: 4px; font-size: 12px; cursor: pointer; transition: background 0.15s;
+    }
+    .player-item:hover { background: rgba(233, 69, 96, 0.15); }
+    .player-item .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .player-item.selected { background: rgba(233, 69, 96, 0.25); }
+    .team-label { font-size: 11px; color: #e94560; margin-top: 8px; margin-bottom: 4px; font-weight: 600; }
+    #stats { margin-top: 12px; font-size: 11px; color: #8899aa; }
+    #stats div { margin-bottom: 3px; }
+
+    /* Info panel */
+    #info-panel {
+      position: absolute; top: 10px; left: 10px; width: 240px;
+      background: rgba(22, 33, 62, 0.95); border: 1px solid #0f3460; border-radius: 8px;
+      padding: 12px; z-index: 10; backdrop-filter: blur(10px);
+    }
+    #info-panel h3 { font-size: 13px; color: #e94560; margin-bottom: 8px; border-bottom: 1px solid #0f3460; padding-bottom: 4px; }
+    #info-panel p { font-size: 11px; color: #8899aa; margin-bottom: 6px; line-height: 1.5; }
+    #info-panel .tag { display: inline-block; background: #0f3460; color: #50e3c2; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin: 1px; }
+
+    /* Loading */
+    #loading {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; background: rgba(26, 26, 46, 0.9); z-index: 100;
+    }
+    .spinner { width: 40px; height: 40px; border: 3px solid #0f3460; border-top-color: #e94560; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    #loading p { margin-top: 12px; font-size: 14px; color: #8899aa; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .esri-ui .esri-widget { background: rgba(22, 33, 62, 0.9) !important; color: #e0e0e0 !important; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="header">
+      <div>
+        <h1>Sport Nvidia — Soccer Player Tracker</h1>
+        <span class="subtitle">NVIDIA GPU Detection + ArcGIS JS API Visualization</span>
+      </div>
+      <div style="text-align:right">
+        <span class="info" id="frame-info">Loading...</span><br/>
+        <a href="https://github.com/garridolecca/Sport_Nvidia" target="_blank">View on GitHub</a>
+      </div>
+    </div>
+
+    <div id="map-container">
+      <div id="viewDiv"></div>
+
+      <div id="loading">
+        <div class="spinner"></div>
+        <p>Initializing ArcGIS map...</p>
+      </div>
+
+      <!-- Info panel -->
+      <div id="info-panel">
+        <h3>About This Demo</h3>
+        <p>22 simulated soccer players tracked at 10 FPS on a real stadium field (Alfheim Stadium, Tromsoe, Norway).</p>
+        <p>In production, player positions are extracted from match video using NVIDIA GPU models:</p>
+        <div>
+          <span class="tag">PeopleNet</span>
+          <span class="tag">YOLOv8-TRT</span>
+          <span class="tag">SORT Tracker</span>
+          <span class="tag">OpenCV Homography</span>
+          <span class="tag">ArcGIS JS API</span>
+        </div>
+        <p style="margin-top:8px">Use the controls below to play/pause, scrub the timeline, toggle trails and heatmap. Click any player to highlight.</p>
+      </div>
+
+      <!-- Player list -->
+      <div id="side-panel">
+        <h3>Players</h3>
+        <div id="player-list"></div>
+        <div id="stats">
+          <div>Frame: <span id="stat-frame">-</span></div>
+          <div>Time: <span id="stat-time">-</span></div>
+          <div>Players: <span id="stat-count">-</span></div>
+        </div>
+      </div>
+
+      <!-- Playback controls -->
+      <div id="controls">
+        <button id="btn-prev" title="Previous frame">&#9664;&#9664;</button>
+        <button id="btn-play" title="Play / Pause">&#9654;</button>
+        <button id="btn-next" title="Next frame">&#9654;&#9654;</button>
+        <input type="range" id="timeline" min="0" max="100" value="0" />
+        <span id="time-display">0:00</span>
+        <div class="toggle-group">
+          <button id="btn-speed-down" title="Slower">-</button>
+          <span id="speed-display">1x</span>
+          <button id="btn-speed-up" title="Faster">+</button>
+        </div>
+        <div class="toggle-group">
+          <button id="btn-trails" title="Toggle trails">Trails</button>
+          <button id="btn-heatmap" title="Toggle heatmap">Heat</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Embedded tracking data -->
+  <script src="tracking_data.js"></script>
+
+  <script>
+  require([
+    "esri/Map", "esri/views/MapView", "esri/Graphic", "esri/layers/GraphicsLayer",
+    "esri/geometry/Point", "esri/geometry/Polyline", "esri/geometry/Polygon",
+    "esri/symbols/SimpleMarkerSymbol", "esri/symbols/SimpleLineSymbol",
+    "esri/symbols/SimpleFillSymbol", "esri/symbols/TextSymbol",
+  ], function(Map, MapView, Graphic, GraphicsLayer, Point, Polyline, Polygon,
+              SimpleMarkerSymbol, SimpleLineSymbol, SimpleFillSymbol, TextSymbol) {
+
+    const COLORS = [
+      "#e94560","#00d2ff","#f5a623","#7ed321","#bd10e0",
+      "#50e3c2","#ff6b6b","#4ecdc4","#ffe66d","#a8e6cf",
+      "#ffd93d","#6c5ce7","#fd79a8","#00b894","#e17055",
+      "#0984e3","#fdcb6e","#6ab04c","#eb4d4b","#7158e2",
+      "#3ae374","#ff3838",
+    ];
+
+    // Team colors
+    const TEAM_A_COLOR = "#e94560";
+    const TEAM_B_COLOR = "#00d2ff";
+
+    let trackingData = TRACKING_DATA;
+    let currentFrameIdx = 0;
+    let isPlaying = false;
+    let playSpeed = 1;
+    let playInterval = null;
+    let showTrails = false;
+    let showHeatmap = false;
+    let selectedPlayerId = null;
+    let playerColorMap = {};
+    let playerTrailPoints = {};
+
+    const fieldLayer = new GraphicsLayer({ title: "Field" });
+    const trailLayer = new GraphicsLayer({ title: "Trails" });
+    const heatLayer  = new GraphicsLayer({ title: "Heatmap" });
+    const playerLayer = new GraphicsLayer({ title: "Players" });
+    const labelLayer = new GraphicsLayer({ title: "Labels" });
+
+    const map = new Map({
+      basemap: "satellite",
+      layers: [fieldLayer, heatLayer, trailLayer, playerLayer, labelLayer],
+    });
+
+    const view = new MapView({
+      container: "viewDiv",
+      map: map,
+      zoom: 18,
+      center: [18.9566, 69.6493],
+      constraints: { minZoom: 16, maxZoom: 21 },
+    });
+
+    function init() {
+      const allIds = new Set();
+      trackingData.frames.forEach(f => f.players.forEach(p => allIds.add(p.id)));
+      const sortedIds = [...allIds].sort((a, b) => a - b);
+
+      sortedIds.forEach((id, i) => {
+        // Team A = ids 1-11, Team B = ids 12-22
+        const team = trackingData.frames[0].players.find(p => p.id === id);
+        if (team && team.team === "A") {
+          playerColorMap[id] = TEAM_A_COLOR;
+        } else if (team && team.team === "B") {
+          playerColorMap[id] = TEAM_B_COLOR;
+        } else {
+          playerColorMap[id] = COLORS[i % COLORS.length];
+        }
+      });
+
+      const timeline = document.getElementById("timeline");
+      timeline.max = trackingData.frames.length - 1;
+      timeline.value = 0;
+
+      const field = trackingData.field;
+      if (field) {
+        const cLat = (field.corner_tl[0] + field.corner_br[0]) / 2;
+        const cLon = (field.corner_tl[1] + field.corner_br[1]) / 2;
+        view.center = [cLon, cLat];
+        view.zoom = 18;
+        drawField(field);
+      }
+
+      buildPlayerList(sortedIds);
+      renderFrame(0);
+
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("frame-info").textContent =
+        trackingData.frames.length + " frames | " + sortedIds.length + " players | Alfheim Stadium";
+    }
+
+    function drawField(field) {
+      var tl = field.corner_tl, tr = field.corner_tr, br = field.corner_br, bl = field.corner_bl;
+      var pitchRing = [[tl[1],tl[0]], [tr[1],tr[0]], [br[1],br[0]], [bl[1],bl[0]], [tl[1],tl[0]]];
+
+      fieldLayer.add(new Graphic({
+        geometry: new Polygon({ rings: [pitchRing] }),
+        symbol: new SimpleFillSymbol({ color: [34,139,34,80], outline: { color: [255,255,255,200], width: 2 } }),
+      }));
+
+      function lerp(a, b, t) { return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]; }
+
+      // Center line
+      var midTop = lerp(tl, tr, 0.5), midBot = lerp(bl, br, 0.5);
+      fieldLayer.add(new Graphic({
+        geometry: new Polyline({ paths: [[[midTop[1],midTop[0]], [midBot[1],midBot[0]]]] }),
+        symbol: new SimpleLineSymbol({ color: [255,255,255,150], width: 1.5 }),
+      }));
+
+      // Center circle
+      var centerLat = (tl[0]+br[0])/2, centerLon = (tl[1]+br[1])/2;
+      var circPts = [];
+      for (var i = 0; i <= 36; i++) {
+        var a = (i/36)*2*Math.PI;
+        circPts.push([centerLon + (9.15*Math.sin(a))/38800, centerLat + (9.15*Math.cos(a))/111320]);
+      }
+      fieldLayer.add(new Graphic({
+        geometry: new Polygon({ rings: [circPts] }),
+        symbol: new SimpleFillSymbol({ color: [0,0,0,0], outline: { color: [255,255,255,150], width: 1.5 } }),
+      }));
+
+      // Center spot
+      fieldLayer.add(new Graphic({
+        geometry: new Point({ longitude: centerLon, latitude: centerLat }),
+        symbol: new SimpleMarkerSymbol({ style: "circle", color: [255,255,255,180], size: 4, outline: { width: 0 } }),
+      }));
+
+      // Penalty areas
+      [0, 1].forEach(function(side) {
+        var pDepth = 16.5 / 105;
+        var pHW = 20.16 / 68;
+        var d1 = side === 0 ? 0 : 1 - pDepth;
+        var d2 = side === 0 ? pDepth : 1;
+        var topL = lerp(lerp(tl,tr,d1), lerp(bl,br,d1), 0.5-pHW);
+        var topR = lerp(lerp(tl,tr,d1), lerp(bl,br,d1), 0.5+pHW);
+        var botL = lerp(lerp(tl,tr,d2), lerp(bl,br,d2), 0.5-pHW);
+        var botR = lerp(lerp(tl,tr,d2), lerp(bl,br,d2), 0.5+pHW);
+
+        fieldLayer.add(new Graphic({
+          geometry: new Polygon({
+            rings: [[[topL[1],topL[0]], [topR[1],topR[0]], [botR[1],botR[0]], [botL[1],botL[0]], [topL[1],topL[0]]]],
+          }),
+          symbol: new SimpleFillSymbol({ color: [0,0,0,0], outline: { color: [255,255,255,120], width: 1.2 } }),
+        }));
+
+        // Goal area (5.5m)
+        var gDepth = 5.5 / 105;
+        var gHW = 9.16 / 68;
+        var gd1 = side === 0 ? 0 : 1 - gDepth;
+        var gd2 = side === 0 ? gDepth : 1;
+        var gtL = lerp(lerp(tl,tr,gd1), lerp(bl,br,gd1), 0.5-gHW);
+        var gtR = lerp(lerp(tl,tr,gd1), lerp(bl,br,gd1), 0.5+gHW);
+        var gbL = lerp(lerp(tl,tr,gd2), lerp(bl,br,gd2), 0.5-gHW);
+        var gbR = lerp(lerp(tl,tr,gd2), lerp(bl,br,gd2), 0.5+gHW);
+
+        fieldLayer.add(new Graphic({
+          geometry: new Polygon({
+            rings: [[[gtL[1],gtL[0]], [gtR[1],gtR[0]], [gbR[1],gbR[0]], [gbL[1],gbL[0]], [gtL[1],gtL[0]]]],
+          }),
+          symbol: new SimpleFillSymbol({ color: [0,0,0,0], outline: { color: [255,255,255,100], width: 1 } }),
+        }));
+
+        // Penalty spot
+        var penSpot = lerp(tl, tr, side === 0 ? 11/105 : 94/105);
+        var penSpotB = lerp(bl, br, side === 0 ? 11/105 : 94/105);
+        var penCenter = lerp(penSpot, penSpotB, 0.5);
+        fieldLayer.add(new Graphic({
+          geometry: new Point({ longitude: penCenter[1], latitude: penCenter[0] }),
+          symbol: new SimpleMarkerSymbol({ style: "circle", color: [255,255,255,150], size: 3, outline: { width: 0 } }),
+        }));
+      });
+    }
+
+    function renderFrame(frameIdx) {
+      if (!trackingData || frameIdx >= trackingData.frames.length) return;
+      currentFrameIdx = frameIdx;
+      var frameData = trackingData.frames[frameIdx];
+
+      playerLayer.removeAll();
+      labelLayer.removeAll();
+
+      frameData.players.forEach(function(player) {
+        var color = playerColorMap[player.id] || "#ffffff";
+        var isSel = player.id === selectedPlayerId;
+
+        playerLayer.add(new Graphic({
+          geometry: new Point({ longitude: player.lon, latitude: player.lat }),
+          symbol: new SimpleMarkerSymbol({
+            style: "circle", color: color, size: isSel ? 14 : 10,
+            outline: { color: isSel ? "#ffffff" : "rgba(0,0,0,0.6)", width: isSel ? 2.5 : 1 },
+          }),
+          attributes: { playerId: player.id },
+        }));
+
+        labelLayer.add(new Graphic({
+          geometry: new Point({ longitude: player.lon, latitude: player.lat }),
+          symbol: new TextSymbol({
+            text: String(player.id), color: "#ffffff",
+            font: { size: 9, weight: "bold" }, yoffset: -14,
+            haloColor: "rgba(0,0,0,0.8)", haloSize: 1.5,
+          }),
+        }));
+
+        if (!playerTrailPoints[player.id]) playerTrailPoints[player.id] = [];
+        playerTrailPoints[player.id].push({ lat: player.lat, lon: player.lon });
+      });
+
+      if (showTrails) drawTrails();
+      updateUI(frameData);
+    }
+
+    function drawTrails() {
+      trailLayer.removeAll();
+      var ids = selectedPlayerId ? [selectedPlayerId] : Object.keys(playerTrailPoints).map(Number);
+      ids.forEach(function(id) {
+        var pts = playerTrailPoints[id];
+        if (!pts || pts.length < 2) return;
+        var recent = pts.slice(-150);
+        var path = recent.map(function(p) { return [p.lon, p.lat]; });
+        trailLayer.add(new Graphic({
+          geometry: new Polyline({ paths: [path] }),
+          symbol: new SimpleLineSymbol({ color: playerColorMap[id] || "#ffffff", width: 2 }),
+        }));
+      });
+    }
+
+    function drawHeatmap() {
+      heatLayer.removeAll();
+      if (!showHeatmap) return;
+      var grid = {}, gridSize = 0.00003;
+      for (var i = 0; i <= currentFrameIdx; i++) {
+        trackingData.frames[i].players.forEach(function(p) {
+          if (selectedPlayerId && p.id !== selectedPlayerId) return;
+          var key = Math.floor(p.lon / gridSize) + "," + Math.floor(p.lat / gridSize);
+          grid[key] = (grid[key] || 0) + 1;
+        });
+      }
+      var maxC = Math.max.apply(null, Object.values(grid).concat([1]));
+      Object.keys(grid).forEach(function(key) {
+        var parts = key.split(",").map(Number);
+        var lon = parts[0] * gridSize, lat = parts[1] * gridSize;
+        var intensity = grid[key] / maxC;
+        var r, g, b;
+        if (intensity < 0.5) { r = Math.floor(intensity*2*255); g = r; b = 255-r; }
+        else { r = 255; g = Math.floor((1-intensity)*2*255); b = 0; }
+        heatLayer.add(new Graphic({
+          geometry: new Polygon({ rings: [[[lon,lat],[lon+gridSize,lat],[lon+gridSize,lat+gridSize],[lon,lat+gridSize],[lon,lat]]] }),
+          symbol: new SimpleFillSymbol({ color: [r,g,b,Math.floor(intensity*120+30)], outline: { width: 0 } }),
+        }));
+      });
+    }
+
+    function buildPlayerList(ids) {
+      var container = document.getElementById("player-list");
+      container.innerHTML = "";
+
+      // Split by team
+      var teamA = ids.filter(function(id) {
+        var p = trackingData.frames[0].players.find(function(pl) { return pl.id === id; });
+        return p && p.team === "A";
+      });
+      var teamB = ids.filter(function(id) {
+        var p = trackingData.frames[0].players.find(function(pl) { return pl.id === id; });
+        return p && p.team === "B";
+      });
+
+      function addTeam(label, teamIds, color) {
+        var lbl = document.createElement("div");
+        lbl.className = "team-label";
+        lbl.style.color = color;
+        lbl.textContent = label;
+        container.appendChild(lbl);
+
+        teamIds.forEach(function(id) {
+          var item = document.createElement("div");
+          item.className = "player-item";
+          item.dataset.id = id;
+          item.innerHTML = '<span class="dot" style="background:' + playerColorMap[id] + '"></span><span>Player ' + id + '</span>';
+          item.addEventListener("click", function() {
+            if (selectedPlayerId === id) {
+              selectedPlayerId = null;
+              item.classList.remove("selected");
+            } else {
+              document.querySelectorAll(".player-item.selected").forEach(function(el) { el.classList.remove("selected"); });
+              selectedPlayerId = id;
+              item.classList.add("selected");
+            }
+            renderFrame(currentFrameIdx);
+            if (showHeatmap) drawHeatmap();
+          });
+          container.appendChild(item);
+        });
+      }
+
+      addTeam("Team A (Home)", teamA, TEAM_A_COLOR);
+      addTeam("Team B (Away)", teamB, TEAM_B_COLOR);
+    }
+
+    function updateUI(frameData) {
+      var ts = frameData.timestamp;
+      var mins = Math.floor(ts / 60);
+      var secs = Math.floor(ts % 60);
+      var timeStr = mins + ":" + String(secs).padStart(2, "0");
+      document.getElementById("time-display").textContent = timeStr;
+      document.getElementById("timeline").value = currentFrameIdx;
+      document.getElementById("stat-frame").textContent = currentFrameIdx;
+      document.getElementById("stat-time").textContent = timeStr;
+      document.getElementById("stat-count").textContent = frameData.players.length;
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      document.getElementById("btn-play").textContent = isPlaying ? "\u23F8" : "\u25B6";
+      document.getElementById("btn-play").classList.toggle("active", isPlaying);
+      if (isPlaying) {
+        var ms = Math.max(16, 100 / playSpeed);
+        playInterval = setInterval(function() {
+          if (currentFrameIdx < trackingData.frames.length - 1) {
+            renderFrame(currentFrameIdx + 1);
+            if (showHeatmap && currentFrameIdx % 10 === 0) drawHeatmap();
+          } else { togglePlay(); }
+        }, ms);
+      } else { clearInterval(playInterval); }
+    }
+
+    function changeSpeed(delta) {
+      var speeds = [0.25, 0.5, 1, 2, 4, 8];
+      var idx = speeds.indexOf(playSpeed);
+      var ni = Math.max(0, Math.min(speeds.length - 1, idx + delta));
+      playSpeed = speeds[ni];
+      document.getElementById("speed-display").textContent = playSpeed + "x";
+      if (isPlaying) { clearInterval(playInterval); isPlaying = false; togglePlay(); }
+    }
+
+    // Event listeners
+    document.getElementById("btn-play").addEventListener("click", togglePlay);
+    document.getElementById("btn-prev").addEventListener("click", function() { if (currentFrameIdx > 0) renderFrame(currentFrameIdx - 1); });
+    document.getElementById("btn-next").addEventListener("click", function() { if (currentFrameIdx < trackingData.frames.length - 1) renderFrame(currentFrameIdx + 1); });
+    document.getElementById("timeline").addEventListener("input", function(e) {
+      playerTrailPoints = {};
+      renderFrame(parseInt(e.target.value, 10));
+      if (showHeatmap) drawHeatmap();
+    });
+    document.getElementById("btn-speed-down").addEventListener("click", function() { changeSpeed(-1); });
+    document.getElementById("btn-speed-up").addEventListener("click", function() { changeSpeed(1); });
+    document.getElementById("btn-trails").addEventListener("click", function() {
+      showTrails = !showTrails;
+      document.getElementById("btn-trails").classList.toggle("active", showTrails);
+      if (!showTrails) trailLayer.removeAll(); else drawTrails();
+    });
+    document.getElementById("btn-heatmap").addEventListener("click", function() {
+      showHeatmap = !showHeatmap;
+      document.getElementById("btn-heatmap").classList.toggle("active", showHeatmap);
+      if (!showHeatmap) heatLayer.removeAll(); else drawHeatmap();
+    });
+
+    document.addEventListener("keydown", function(e) {
+      if (e.code === "Space") { e.preventDefault(); togglePlay(); }
+      if (e.code === "ArrowLeft" && currentFrameIdx > 0) renderFrame(currentFrameIdx - 1);
+      if (e.code === "ArrowRight" && currentFrameIdx < trackingData.frames.length - 1) renderFrame(currentFrameIdx + 1);
+    });
+
+    view.on("click", function(event) {
+      view.hitTest(event).then(function(response) {
+        var hit = response.results.find(function(r) { return r.graphic && r.graphic.attributes && r.graphic.attributes.playerId; });
+        if (hit) {
+          var id = hit.graphic.attributes.playerId;
+          selectedPlayerId = selectedPlayerId === id ? null : id;
+          document.querySelectorAll(".player-item.selected").forEach(function(el) { el.classList.remove("selected"); });
+          if (selectedPlayerId) {
+            var el = document.querySelector('.player-item[data-id="' + id + '"]');
+            if (el) el.classList.add("selected");
+          }
+          renderFrame(currentFrameIdx);
+          if (showHeatmap) drawHeatmap();
+        }
+      });
+    });
+
+    view.when(function() { init(); });
+  });
+  </script>
+</body>
+</html>

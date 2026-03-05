@@ -1,7 +1,11 @@
 # Soccer Player Tracker
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-GitHub_Pages-brightgreen)](https://garridolecca.github.io/Sport_Nvidia/)
+
 Detect and track soccer players from match video using NVIDIA GPU-accelerated models,
 then visualize their positions and movements on an interactive ArcGIS JavaScript API map.
+
+**[Live Demo](https://garridolecca.github.io/Sport_Nvidia/)**
 
 ## Architecture
 
@@ -130,3 +134,15 @@ soccer-tracker/
 | `GET /api/tracking/range?start=0&end=100` | Frame range |
 | `GET /api/tracking/player/{id}/trail` | Player movement trail |
 | `GET /api/tracking/players` | All player IDs |
+
+## Live Demo
+
+The GitHub Pages demo runs entirely in the browser with embedded demo data (no backend needed):
+
+**https://garridolecca.github.io/Sport_Nvidia/**
+
+Features visible in the demo:
+- Satellite basemap centered on Alfheim Stadium (Tromsoe, Norway)
+- Soccer field overlay with all standard markings
+- 22 players (Team A in red, Team B in blue) with animated movement
+- Playback controls, trails, heatmap, and player selection
